@@ -1,0 +1,42 @@
+// vim: syntax=c
+
+extern "C" {
+extern const size_t wbcffi_version = 2;
+
+void *wbcffi_init(
+    const wbcffi_init_info *init_info, const struct wbcffi_config_entry *config_entries, size_t config_entries_len
+) {
+    try {
+        return new MODULENAME(init_info, config_entries, config_entries_len);
+    } catch (const std::exception &e) {
+        common::log_error("Failed to initialize module: " + std::string(e.what()));
+        return nullptr;
+    }
+}
+
+void wbcffi_deinit(void *instance) {
+    delete static_cast<MODULENAME *>(instance);
+}
+
+void wbcffi_update(void *instance) {
+    MODULENAME *module = static_cast<MODULENAME *>(instance);
+    if (module) {
+        module->update();
+    }
+}
+
+void wbcffi_refresh(void *instance, int signal) {
+    MODULENAME *module = static_cast<MODULENAME *>(instance);
+    if (module) {
+        module->refresh(signal);
+    }
+}
+
+GtkWidget *wbcffi_get_widget(void *instance) {
+    MODULENAME *module = static_cast<MODULENAME *>(instance);
+    if (module) {
+        return module->get_widget();
+    }
+    return nullptr;
+}
+}
