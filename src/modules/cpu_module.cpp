@@ -27,11 +27,14 @@ void CpuModule::update() {
     const std::string &icon = get_icon_for_state_name(state_name);
     const std::string &format = get_format_for_state_name(state_name);
 
-    // 使用公共工具格式化输出
-    std::string usage_str = common::format_number(usage);
+    // 定义format_args，供format和tooltip共同使用
+    std::vector<std::pair<std::string, waybar::cffi::common::format_arg>> args = {
+        {"icon", icon}, {"usage", common::format_number(usage)}, {"state", state_name}
+    };
+
     std::string display_text = common::safe_execute<std::string>(
-        [&]() { return common::format_string<std::string>(format, {{"icon", icon}, {"usage", usage_str}}); },
-        format + " " + icon + " " + usage_str, "Error formatting output"
+        [&]() { return common::format_string(format, args); }, format + " " + icon + " " + common::format_number(usage),
+        "Error formatting output"
     );
 
     // 更新标签
@@ -39,8 +42,10 @@ void CpuModule::update() {
 
     // 设置tooltip
     if (config().tooltip) {
-        std::string tooltip = common::format_string<std::string>(
-            config().format_tooltip, {{"usage", common::format_number(usage)}, {"state", state_name}}
+        auto tooltip_format = get_tooltip_format();
+        std::string tooltip = common::safe_execute<std::string>(
+            [&]() { return common::format_string(tooltip_format, args); }, icon + " " + common::format_number(usage),
+            "Error formatting tooltip"
         );
 
         gtk_widget_set_tooltip_text(event_box_, tooltip.c_str());

@@ -24,8 +24,7 @@ struct wbcffi_config_entry;
 namespace waybar::cffi::common {
 
 // 日志记录函数 - 使用fmt库风格的格式化
-template <typename... Args> 
-void log_error(fmt::format_string<Args...> fmt, Args &&...args) {
+template <typename... Args> void log_error(fmt::format_string<Args...> fmt, Args &&...args) {
     auto now = std::chrono::system_clock::now();
     auto time_t = std::chrono::system_clock::to_time_t(now);
     auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()) % 1000;
@@ -41,8 +40,7 @@ void log_error(fmt::format_string<Args...> fmt, Args &&...args) {
     fprintf(stderr, "[%s] [\033[0;31merror\033[0m] %s\n", oss.str().c_str(), message.c_str());
 }
 
-template <typename... Args> 
-void log_warning(fmt::format_string<Args...> fmt, Args &&...args) {
+template <typename... Args> void log_warning(fmt::format_string<Args...> fmt, Args &&...args) {
     auto now = std::chrono::system_clock::now();
     auto time_t = std::chrono::system_clock::to_time_t(now);
     auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()) % 1000;
@@ -58,8 +56,7 @@ void log_warning(fmt::format_string<Args...> fmt, Args &&...args) {
     fprintf(stderr, "[%s] [\033[0;33mwarning\033[0m] %s\n", oss.str().c_str(), message.c_str());
 }
 
-template <typename... Args> 
-void log_info(fmt::format_string<Args...> fmt, Args &&...args) {
+template <typename... Args> void log_info(fmt::format_string<Args...> fmt, Args &&...args) {
     auto now = std::chrono::system_clock::now();
     auto time_t = std::chrono::system_clock::to_time_t(now);
     auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()) % 1000;
@@ -84,28 +81,6 @@ using format_arg = std::variant<int, double, std::string>;
 // 混合类型版本：支持不同类型的参数值
 // 例如: format_string("Power: {value:.2f}W, Count: {count:>3}", {{"value", 12.3456}, {"count", 42}})
 std::string format_string(const std::string &format_str, const std::vector<std::pair<std::string, format_arg>> &args);
-
-// 泛型版本：支持相同类型的参数值（保留向后兼容性）
-// 例如: format_string("Power: {value:.2f}W", {{"value", 12.3456}}) -> "Power: 12.35W"
-template <typename T>
-std::string format_string(const std::string &format_str, const std::vector<std::pair<std::string, T>> &args) {
-    try {
-        // 使用fmt库的动态参数存储
-        fmt::dynamic_format_arg_store<fmt::format_context> store;
-
-        // 将所有参数添加到存储中
-        for (const auto &[name, value] : args) {
-            // 直接添加值，让fmt库处理类型
-            store.push_back(fmt::arg(name.c_str(), value));
-        }
-
-        // 使用vformat进行格式化
-        return fmt::vformat(format_str, store);
-    } catch (const std::exception &e) {
-        log_error("Error in format_string (generic version): {}", e.what());
-        return format_str; // 返回原始格式字符串
-    }
-}
 
 // 格式化数字，确保总长度为指定字符数（默认4字符）
 // 例如: format_number(75.5) -> "75.5", format_number(5.25) -> "5.25", format_number(100.0) -> "100"

@@ -33,15 +33,24 @@ void GpuModule::update() {
 
         // 使用混合类型的format_string函数，支持格式说明符
         std::vector<std::pair<std::string, waybar::cffi::common::format_arg>> args = {
-            {"icon", icon}, {"gpu_usage", gpu_usage}, {"vram_used", vram_used}
+            {"icon", icon}, {"gpu_usage", gpu_usage}, {"vram_used", common::format_number(vram_used)}
         };
 
-        std::string text = common::format_string(format_str, args);
+        std::string text = common::safe_execute<std::string>(
+            [&]() { return common::format_string(format_str, args); }, icon + " " + std::to_string(gpu_usage),
+            "Error formatting output"
+        );
         gtk_label_set_text(GTK_LABEL(label_), text.c_str());
 
         // 设置tooltip
-        std::string tooltip = common::format_string(config().format_tooltip, args);
-        gtk_widget_set_tooltip_text(event_box_, tooltip.c_str());
+        if (config().tooltip) {
+            auto tooltip_format = get_tooltip_format();
+            std::string tooltip = common::safe_execute<std::string>(
+                [&]() { return common::format_string(tooltip_format, args); }, icon + " " + std::to_string(gpu_usage),
+                "Error formatting tooltip"
+            );
+            gtk_widget_set_tooltip_text(event_box_, tooltip.c_str());
+        }
 
     } catch (const std::exception &e) {
         common::log_error("Error updating GPU module: {}", e.what());

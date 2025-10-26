@@ -34,16 +34,17 @@ void TemperatureModule::update() {
     std::string temperature_f_str = std::to_string(temperature_f_int);
     std::string temperature_k_str = std::to_string(temperature_k_int);
 
+    // 定义format_args，供format和tooltip共同使用
+    std::vector<std::pair<std::string, waybar::cffi::common::format_arg>> args = {
+        {"icon", icon},
+        {"temperature_c", temperature_c_int},
+        {"temperature_f", temperature_f_int},
+        {"temperature_k", temperature_k_int}
+    };
+
     std::string display_text = common::safe_execute<std::string>(
-        [&]() {
-            return common::format_string<std::string>(
-                format, {{"icon", icon},
-                         {"temperature_c", temperature_c_str},
-                         {"temperature_f", temperature_f_str},
-                         {"temperature_k", temperature_k_str}}
-            );
-        },
-        format + " " + icon + " " + temperature_c_str, "Error formatting output"
+        [&]() { return common::format_string(format, args); },
+        format + " " + icon + " " + std::to_string(temperature_c_int), "Error formatting output"
     );
 
     // 更新标签
@@ -51,16 +52,10 @@ void TemperatureModule::update() {
 
     // 设置tooltip
     if (config().tooltip) {
+        auto tooltip_format = get_tooltip_format();
         std::string tooltip = common::safe_execute<std::string>(
-            [&]() {
-                // 使用泛型版本的format_string，直接传递int值
-                return common::format_string<int>(
-                    config().format_tooltip, {{"temperature_c", temperature_c_int},
-                                              {"temperature_f", temperature_f_int},
-                                              {"temperature_k", temperature_k_int}}
-                );
-            },
-            config().format_tooltip, "Error formatting tooltip"
+            [&]() { return common::format_string(tooltip_format, args); },
+            icon + " " + std::to_string(temperature_c_int), "Error formatting tooltip"
         );
 
         gtk_widget_set_tooltip_text(event_box_, tooltip.c_str());

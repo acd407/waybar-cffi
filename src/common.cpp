@@ -17,20 +17,41 @@ std::string format_string(const std::string &format_str, const std::vector<std::
         fmt::dynamic_format_arg_store<fmt::format_context> store;
 
         // 将所有参数添加到存储中
-        for (const auto &[name, value] : args) {
-            // 使用std::visit访问variant中的值
-            std::visit(
-                [&store, &name](auto &&arg) {
-                    // 直接添加值，让fmt库处理类型和格式化
-                    store.push_back(fmt::arg(name.c_str(), arg));
-                },
-                value
-            );
+        for (const auto &[key, value] : args) {
+            std::visit([&](auto &&arg) { store.push_back(fmt::arg(key.c_str(), arg)); }, value);
         }
 
         // 使用vformat进行格式化
         return fmt::vformat(format_str, store);
     } catch (const std::exception &e) {
+        // 发生错误时，解析并输出args参数以便调试
+        log_info("=== format_string 错误调试信息 ===");
+        log_info("错误信息: {}", e.what());
+        log_info("格式字符串: {}", format_str);
+        log_info("参数数量: {}", args.size());
+
+        // 遍历所有参数
+        for (size_t i = 0; i < args.size(); ++i) {
+            const auto &[key, value] = args[i];
+            log_info("参数[{}]: 键 = '{}'", i, key);
+
+            // 使用std::visit访问variant中的值
+            std::visit(
+                [&](auto &&arg) {
+                    using T = std::decay_t<decltype(arg)>;
+                    if constexpr (std::is_same_v<T, int>) {
+                        log_info("  值类型: int, 值 = {}", arg);
+                    } else if constexpr (std::is_same_v<T, double>) {
+                        log_info("  值类型: double, 值 = {}", arg);
+                    } else if constexpr (std::is_same_v<T, std::string>) {
+                        log_info("  值类型: string, 值 = '{}'", arg);
+                    }
+                },
+                value
+            );
+        }
+        log_info("=== 错误调试信息结束 ===");
+
         log_error("Error in format_string (mixed type version): {}", e.what());
         return format_str; // 返回原始格式字符串
     }

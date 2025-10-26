@@ -77,22 +77,18 @@ void RaplModule::update() {
     const std::string &icon = get_icon_for_state_name(state_name);
     const std::string &format = get_format_for_state_name(state_name);
 
-    // 使用公共工具格式化输出
-    std::string power_str = common::format_number(package_power);
-    std::string core_power_str = common::format_number(core_power);
-    std::string other_power_str = common::format_number(other_power);
+    // 定义format_args，供format和tooltip共同使用
+    std::vector<std::pair<std::string, waybar::cffi::common::format_arg>> args = {
+        {"icon", icon},
+        {"power", common::format_number(package_power)},
+        {"package_power", common::format_number(package_power)},
+        {"core_power", common::format_number(core_power)},
+        {"other_power", common::format_number(other_power)}
+    };
 
     std::string display_text = common::safe_execute<std::string>(
-        [&]() {
-            return common::format_string<std::string>(
-                format, {{"icon", icon},
-                         {"power", power_str},
-                         {"package_power", power_str},
-                         {"core_power", core_power_str},
-                         {"other_power", other_power_str}}
-            );
-        },
-        format + " " + icon + " " + power_str, "Error formatting output"
+        [&]() { return common::format_string(format, args); },
+        format + " " + icon + " " + common::format_number(package_power), "Error formatting output"
     );
 
     // 更新标签
@@ -100,15 +96,10 @@ void RaplModule::update() {
 
     // 设置tooltip
     if (config().tooltip) {
+        auto tooltip_format = get_tooltip_format();
         std::string tooltip = common::safe_execute<std::string>(
-            [&]() {
-                // 使用泛型版本的format_string，直接传递double值
-                return common::format_string<double>(
-                    config().format_tooltip,
-                    {{"package_power", package_power}, {"core_power", core_power}, {"other_power", other_power}}
-                );
-            },
-            config().format_tooltip, "Error formatting tooltip"
+            [&]() { return common::format_string(tooltip_format, args); },
+            icon + " " + common::format_number(package_power), "Error formatting tooltip"
         );
 
         gtk_widget_set_tooltip_text(event_box_, tooltip.c_str());
