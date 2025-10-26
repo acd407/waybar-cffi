@@ -86,7 +86,7 @@ set(COMMON_HEADERS
 )
 
 # 定义所有模块
-set(MODULES cpu rapl temperature gpu)
+set(MODULES cpu rapl temperature gpu network)
 
 # 循环创建所有模块
 foreach(module ${MODULES})
@@ -111,7 +111,7 @@ endforeach()
 
 # 处理manpage
 if(SCDOC_EXECUTABLE)
-    set(MANPAGE_MODULES cpu rapl temperature gpu)
+    set(MANPAGE_MODULES cpu rapl temperature gpu network)
     
     # 为每个模块创建manpage
     foreach(module ${MANPAGE_MODULES})
