@@ -9,6 +9,7 @@
 #include <functional>
 #include <unordered_map>
 #include <memory>
+#include <cstdlib>
 #include <common.hpp>
 #include <concepts>
 
@@ -72,11 +73,14 @@ struct ModuleConfigBase {
     std::unordered_map<std::string, std::string> config_map;
 
     int interval = 1;
-    bool tooltip = false;
+    bool tooltip = true; // 默认启用tooltip
     std::string format_tooltip;
     std::unordered_map<std::string, std::string> icons;
     std::unordered_map<std::string, std::string> formats;
     std::unordered_map<std::string, ThresholdType> states; // 存储状态名称和阈值
+
+    // 鼠标事件动作配置
+    std::unordered_map<std::string, std::string> actions; // 存储鼠标事件对应的动作
 
     // 构造函数，初始化默认状态和格式
     ModuleConfigBase() {
@@ -138,6 +142,21 @@ struct ModuleConfigBase {
                 common::log_error("Failed to parse states JSON: {}", e.what());
             }
         }
+
+        // 解析鼠标事件动作配置
+        auto actions_value = config_map.find("actions");
+        if (actions_value != config_map.end()) {
+            try {
+                nlohmann::json actions = nlohmann::json::parse(actions_value->second);
+                for (auto it = actions.begin(); it != actions.end(); ++it) {
+                    if (it.value().is_string()) {
+                        this->actions[it.key()] = it.value();
+                    }
+                }
+            } catch (const nlohmann::json::exception &e) {
+                common::log_error("Failed to parse actions JSON: {}", e.what());
+            }
+        }
     }
 };
 
@@ -183,8 +202,8 @@ template <typename ConfigType> class ModuleBase {
 
     // 定时器ID
     guint timer_id_ = 0;
-    bool handles_button_press_ = false; // 标记子类是否重载了handle_button_press
-    bool handles_scroll_ = false;       // 标记子类是否重载了handle_scroll
+    bool handles_button_press_ = true; // 标记子类是否重载了handle_button_press
+    bool handles_scroll_ = true;       // 标记子类是否重载了handle_scroll
 
     // 内部方法
     void init_ui(const wbcffi_init_info *init_info);
@@ -193,6 +212,9 @@ template <typename ConfigType> class ModuleBase {
     // 获取状态对应的图标和格式
     virtual const std::string &get_icon_for_state_name(const std::string &state_name) const;
     virtual const std::string &get_format_for_state_name(const std::string &state_name) const;
+
+    // 获取tooltip格式，如果format-tooltip为空则回退到默认格式
+    const std::string &get_tooltip_format() const;
 
     // 根据值获取状态字符串并设置对应的CSS类 - 模板方法支持不同类型
     template <typename ValueType> std::string get_state(ValueType value, bool lesser = false);
@@ -205,6 +227,9 @@ template <typename ConfigType> class ModuleBase {
 
     // 虚函数，子类可以重载来实现自定义按钮点击处理
     virtual gboolean handle_button_press(GdkEventButton *event);
+
+    // 执行动作的通用方法
+    void execute_action(const std::string &action);
 
     // 滚轮事件回调
     static gboolean scroll_event_callback(GtkWidget *widget, GdkEventScroll *event, gpointer user_data);
@@ -268,6 +293,9 @@ template <typename ConfigType> void ModuleBase<ConfigType>::init_ui(const wbcffi
     label_ = gtk_label_new("");
     gtk_container_add(GTK_CONTAINER(event_box_), label_);
 
+    // 设置tooltip查询属性，确保tooltip可以显示
+    gtk_widget_set_has_tooltip(event_box_, TRUE);
+
     // 设置鼠标指针
     GdkWindow *window = gtk_widget_get_window(event_box_);
     if (window) {
@@ -330,6 +358,23 @@ const std::string &ModuleBase<ConfigType>::get_format_for_state_name(const std::
     }
 
     // 如果找不到对应状态的格式，尝试使用默认格式
+    auto default_it = config_->formats.find("default");
+    if (default_it != config_->formats.end()) {
+        return default_it->second;
+    }
+
+    // 最后的备用方案：返回空字符串
+    static const std::string empty_format = "{}";
+    return empty_format;
+}
+
+template <typename ConfigType> const std::string &ModuleBase<ConfigType>::get_tooltip_format() const {
+    // 如果format-tooltip不为空，使用它
+    if (!config_->format_tooltip.empty()) {
+        return config_->format_tooltip;
+    }
+
+    // 否则尝试使用默认格式
     auto default_it = config_->formats.find("default");
     if (default_it != config_->formats.end()) {
         return default_it->second;
@@ -408,8 +453,42 @@ gboolean ModuleBase<ConfigType>::button_press_callback(GtkWidget *widget, GdkEve
 
 // 默认的虚函数实现
 template <typename ConfigType> gboolean ModuleBase<ConfigType>::handle_button_press(GdkEventButton *event) {
-    (void)event;
+    // 根据按钮类型确定动作键
+    std::string action_key;
+    switch (event->button) {
+    case 1: // 左键
+        action_key = "on-left-click";
+        break;
+    case 2: // 中键
+        action_key = "on-middle-click";
+        break;
+    case 3: // 右键
+        action_key = "on-right-click";
+        break;
+    default:
+        return TRUE; // 不处理其他按钮
+    }
+
+    // 查找配置的动作
+    auto it = config_->actions.find(action_key);
+    if (it != config_->actions.end()) {
+        execute_action(it->second);
+    }
+
     return TRUE;
+}
+
+// 执行动作的通用方法
+template <typename ConfigType> void ModuleBase<ConfigType>::execute_action(const std::string &action) {
+    if (action.empty()) {
+        return;
+    }
+
+    // 使用system执行命令
+    int result = std::system(action.c_str());
+    if (result != 0) {
+        common::log_error("Failed to execute action '{}', exit code: {}", action, result);
+    }
 }
 
 // 滚轮事件回调
@@ -453,7 +532,31 @@ gboolean ModuleBase<ConfigType>::scroll_event_callback(GtkWidget *widget, GdkEve
 
 // 默认的滚轮事件虚函数实现
 template <typename ConfigType> gboolean ModuleBase<ConfigType>::handle_scroll(GdkEventScroll *event) {
-    (void)event;
+    // 根据滚动方向确定动作键
+    std::string action_key;
+    switch (event->direction) {
+    case GDK_SCROLL_UP:
+        action_key = "on-scroll-up";
+        break;
+    case GDK_SCROLL_DOWN:
+        action_key = "on-scroll-down";
+        break;
+    case GDK_SCROLL_LEFT:
+        action_key = "on-scroll-left";
+        break;
+    case GDK_SCROLL_RIGHT:
+        action_key = "on-scroll-right";
+        break;
+    default:
+        return TRUE; // 不处理其他滚动方向
+    }
+
+    // 查找配置的动作
+    auto it = config_->actions.find(action_key);
+    if (it != config_->actions.end()) {
+        execute_action(it->second);
+    }
+
     return TRUE;
 }
 
