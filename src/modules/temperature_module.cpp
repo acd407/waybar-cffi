@@ -72,13 +72,13 @@ void TemperatureModule::update() {
 float TemperatureModule::get_temperature() const {
     std::ifstream file(config_->hwmon_path);
     if (!file.is_open()) {
-        common::log_error("Failed to open temperature file: " + config_->hwmon_path);
+        common::log_error("Failed to open temperature file: {}", config_->hwmon_path);
         return 0.0f;
     }
 
     std::string line;
     if (!std::getline(file, line)) {
-        common::log_error("Failed to read temperature from: " + config_->hwmon_path);
+        common::log_error("Failed to read temperature from: {}", config_->hwmon_path);
         return 0.0f;
     }
 

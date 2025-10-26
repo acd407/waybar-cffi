@@ -16,16 +16,64 @@
 #include <type_traits>
 #include <fmt/format.h>
 #include <fmt/args.h>
+#include <chrono>
 
 // 前向声明配置条目结构
 struct wbcffi_config_entry;
 
 namespace waybar::cffi::common {
 
-// 日志记录函数
-void log_error(const std::string &message);
-void log_warning(const std::string &message);
-void log_info(const std::string &message);
+// 日志记录函数 - 使用fmt库风格的格式化
+template <typename... Args> 
+void log_error(fmt::format_string<Args...> fmt, Args &&...args) {
+    auto now = std::chrono::system_clock::now();
+    auto time_t = std::chrono::system_clock::to_time_t(now);
+    auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()) % 1000;
+
+    std::ostringstream oss;
+    oss << std::put_time(std::localtime(&time_t), "%Y-%m-%d %H:%M:%S");
+    oss << '.' << std::setfill('0') << std::setw(3) << ms.count();
+
+    // 使用fmt库格式化消息
+    std::string message = fmt::vformat(fmt, fmt::make_format_args(args...));
+
+    // 使用ANSI颜色代码：红色表示错误
+    fprintf(stderr, "[%s] [\033[0;31merror\033[0m] %s\n", oss.str().c_str(), message.c_str());
+}
+
+template <typename... Args> 
+void log_warning(fmt::format_string<Args...> fmt, Args &&...args) {
+    auto now = std::chrono::system_clock::now();
+    auto time_t = std::chrono::system_clock::to_time_t(now);
+    auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()) % 1000;
+
+    std::ostringstream oss;
+    oss << std::put_time(std::localtime(&time_t), "%Y-%m-%d %H:%M:%S");
+    oss << '.' << std::setfill('0') << std::setw(3) << ms.count();
+
+    // 使用fmt库格式化消息
+    std::string message = fmt::vformat(fmt, fmt::make_format_args(args...));
+
+    // 使用ANSI颜色代码：黄色表示警告
+    fprintf(stderr, "[%s] [\033[0;33mwarning\033[0m] %s\n", oss.str().c_str(), message.c_str());
+}
+
+template <typename... Args> 
+void log_info(fmt::format_string<Args...> fmt, Args &&...args) {
+    auto now = std::chrono::system_clock::now();
+    auto time_t = std::chrono::system_clock::to_time_t(now);
+    auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()) % 1000;
+
+    std::ostringstream oss;
+    oss << std::put_time(std::localtime(&time_t), "%Y-%m-%d %H:%M:%S");
+    oss << '.' << std::setfill('0') << std::setw(3) << ms.count();
+
+    // 使用fmt库格式化消息
+    std::string message = fmt::vformat(fmt, fmt::make_format_args(args...));
+
+    // 使用ANSI颜色代码：绿色表示信息
+    fprintf(stdout, "[%s] [\033[0;32minfo\033[0m] %s\n", oss.str().c_str(), message.c_str());
+}
 
 // 清理字符串值，去除引号和换行符，并处理转义序列
 std::string clean_string_value(const std::string &value);
@@ -54,7 +102,7 @@ std::string format_string(const std::string &format_str, const std::vector<std::
         // 使用vformat进行格式化
         return fmt::vformat(format_str, store);
     } catch (const std::exception &e) {
-        log_error("Error in format_string (generic version): " + std::string(e.what()));
+        log_error("Error in format_string (generic version): {}", e.what());
         return format_str; // 返回原始格式字符串
     }
 }
@@ -81,14 +129,14 @@ T get_config_value(
         try {
             return std::stoi(value);
         } catch (const std::exception &) {
-            log_warning("Invalid integer value for config key: " + key);
+            log_warning("Invalid integer value for config key: {}", key);
             return default_value;
         }
     } else if constexpr (std::is_same_v<T, double>) {
         try {
             return std::stod(value);
         } catch (const std::exception &) {
-            log_warning("Invalid double value for config key: " + key);
+            log_warning("Invalid double value for config key: {}", key);
             return default_value;
         }
     } else if constexpr (std::is_same_v<T, bool>) {
@@ -101,7 +149,7 @@ T get_config_value(
         } else if (lower_value == "false" || lower_value == "0" || lower_value == "no" || lower_value == "off") {
             return false;
         } else {
-            log_warning("Invalid boolean value for config key: " + key);
+            log_warning("Invalid boolean value for config key: {}", key);
             return default_value;
         }
     } else {
@@ -117,10 +165,10 @@ T safe_execute(std::function<T()> func, const T &default_value, const std::strin
     try {
         return func();
     } catch (const std::exception &e) {
-        log_error(error_context + ": " + std::string(e.what()));
+        log_error("{}: {}", error_context, e.what());
         return default_value;
     } catch (...) {
-        log_error(error_context + ": Unknown error");
+        log_error("{}: Unknown error", error_context);
         return default_value;
     }
 }

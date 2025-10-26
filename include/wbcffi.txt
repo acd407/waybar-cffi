@@ -9,7 +9,7 @@ void *wbcffi_init(
     try {
         return new MODULENAME(init_info, config_entries, config_entries_len);
     } catch (const std::exception &e) {
-        common::log_error("Failed to initialize module: " + std::string(e.what()));
+        common::log_error("Failed to initialize module: {}", e.what());
         return nullptr;
     }
 }

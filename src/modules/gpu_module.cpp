@@ -44,7 +44,7 @@ void GpuModule::update() {
         gtk_widget_set_tooltip_text(event_box_, tooltip.c_str());
 
     } catch (const std::exception &e) {
-        common::log_error("Error updating GPU module: " + std::string(e.what()));
+        common::log_error("Error updating GPU module: {}", e.what());
         gtk_label_set_text(GTK_LABEL(label_), "Error");
     }
 }
@@ -114,7 +114,7 @@ gboolean GpuModule::handle_button_press(GdkEventButton *event) {
         // 立即更新显示
         update();
 
-        common::log_info("GPU module format switched to: " + current_format_key_);
+        common::log_info("GPU module format switched to: {}", current_format_key_);
 
         // 返回TRUE表示我们已经处理了点击事件
         return TRUE;

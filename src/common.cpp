@@ -31,7 +31,7 @@ std::string format_string(const std::string &format_str, const std::vector<std::
         // 使用vformat进行格式化
         return fmt::vformat(format_str, store);
     } catch (const std::exception &e) {
-        log_error("Error in format_string (mixed type version): " + std::string(e.what()));
+        log_error("Error in format_string (mixed type version): {}", e.what());
         return format_str; // 返回原始格式字符串
     }
 }
@@ -60,46 +60,6 @@ std::string format_number(double value, int total_length) {
     }
 
     return result;
-}
-
-// 日志记录函数
-void log_error(const std::string &message) {
-    auto now = std::chrono::system_clock::now();
-    auto time_t = std::chrono::system_clock::to_time_t(now);
-    auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()) % 1000;
-
-    std::ostringstream oss;
-    oss << std::put_time(std::localtime(&time_t), "%Y-%m-%d %H:%M:%S");
-    oss << '.' << std::setfill('0') << std::setw(3) << ms.count();
-
-    // 使用ANSI颜色代码：红色表示错误
-    fprintf(stderr, "[%s] [\033[0;31merror\033[0m] %s\n", oss.str().c_str(), message.c_str());
-}
-
-void log_warning(const std::string &message) {
-    auto now = std::chrono::system_clock::now();
-    auto time_t = std::chrono::system_clock::to_time_t(now);
-    auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()) % 1000;
-
-    std::ostringstream oss;
-    oss << std::put_time(std::localtime(&time_t), "%Y-%m-%d %H:%M:%S");
-    oss << '.' << std::setfill('0') << std::setw(3) << ms.count();
-
-    // 使用ANSI颜色代码：黄色表示警告
-    fprintf(stderr, "[%s] [\033[0;33mwarning\033[0m] %s\n", oss.str().c_str(), message.c_str());
-}
-
-void log_info(const std::string &message) {
-    auto now = std::chrono::system_clock::now();
-    auto time_t = std::chrono::system_clock::to_time_t(now);
-    auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()) % 1000;
-
-    std::ostringstream oss;
-    oss << std::put_time(std::localtime(&time_t), "%Y-%m-%d %H:%M:%S");
-    oss << '.' << std::setfill('0') << std::setw(3) << ms.count();
-
-    // 使用ANSI颜色代码：绿色表示信息
-    fprintf(stdout, "[%s] [\033[0;32minfo\033[0m] %s\n", oss.str().c_str(), message.c_str());
 }
 
 // 辅助函数：将Unicode码点写入输出流
@@ -264,7 +224,7 @@ std::string clean_string_value(const std::string &value) {
     try {
         result = waybar_parse_escape_sequences(result);
     } catch (const std::exception &e) {
-        log_warning("Error parsing escape sequences: " + std::string(e.what()));
+        log_warning("Error parsing escape sequences: {}", e.what());
     }
 
     return result;

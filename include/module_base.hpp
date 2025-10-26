@@ -106,7 +106,7 @@ struct ModuleConfigBase {
                     }
                 }
             } catch (const nlohmann::json::exception &e) {
-                common::log_error("Failed to parse formats JSON: " + std::string(e.what()));
+                common::log_error("Failed to parse formats JSON: {}", e.what());
             }
         }
 
@@ -121,7 +121,7 @@ struct ModuleConfigBase {
                     }
                 }
             } catch (const nlohmann::json::exception &e) {
-                common::log_error("Failed to parse icons JSON: " + std::string(e.what()));
+                common::log_error("Failed to parse icons JSON: {}", e.what());
             }
         }
 
@@ -135,7 +135,7 @@ struct ModuleConfigBase {
                     }
                 }
             } catch (const nlohmann::json::exception &e) {
-                common::log_error("Failed to parse states JSON: " + std::string(e.what()));
+                common::log_error("Failed to parse states JSON: {}", e.what());
             }
         }
     }
@@ -440,7 +440,7 @@ gboolean ModuleBase<ConfigType>::scroll_event_callback(GtkWidget *widget, GdkEve
             direction = "UNKNOWN";
             break;
         }
-        common::log_info("Scroll event received in module, direction: " + direction);
+        common::log_info("Scroll event received in module, direction: {}", direction);
 
         // 调用虚函数，允许子类重载行为
         module->handle_scroll(event);
