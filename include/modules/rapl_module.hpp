@@ -17,7 +17,7 @@ struct RaplConfig : public base::ModuleConfigBase<double> {
     using ThresholdType = double;
 
     std::string sysfs_dir = "/sys/class/powercap/intel-rapl:0";
-    std::string format_tooltip = "Package: {package_power:.2f}W\nCore: {core_power:.2f}W\nOther: {other_power:.2f}W";
+    std::string format_tooltip = "Package: {package_power}W\nCore: {core_power}W\nOther: {other_power}W";
 
     RaplConfig() {
         icons["default"] = "󰟩";

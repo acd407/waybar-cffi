@@ -16,12 +16,12 @@ struct GpuConfig : public base::ModuleConfigBase<int> {
 
     std::string gpu_usage_path = "/sys/class/drm/card1/device/gpu_busy_percent";
     std::string vram_used_path = "/sys/class/drm/card1/device/mem_info_vram_used";
-    std::string format_tooltip = "GPU: {gpu_usage:>2}% VRAM: {vram_used:.2f}G";
+    std::string format_tooltip = "GPU: {gpu_usage}%\nVRAM: {vram_used}G";
 
     GpuConfig() {
         icons["default"] = "󰍹";
-        formats["default"] = "{icon}\u2004{gpu_usage}%";
-        formats["alt"] = "{icon}\u2004{gpu_usage}%\u2004{vram_used:.1f}GB";
+        formats["default"] = "{icon}\u2004{gpu_usage:>2}%";
+        formats["alt"] = "{icon}\u2004{vram_used}GB";
         states["warning"] = 20;
         states["critical"] = 50;
     }
